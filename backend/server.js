@@ -12,6 +12,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const AdviceEngine = require('./ai_advice_engine');
 const geminiService = require('./gemini_service');
+const groqService = require('./groq_service');
 const quizService = require('./quiz_service');
 
 const app = express();
@@ -383,13 +384,13 @@ app.post('/api/advice', async (req, res) => {
     // Normalize text (allow empty strings - AI will handle it)
     const normalizedText = (text && typeof text === 'string') ? text : '';
 
-    // Try Gemini AI first (if available) - handles all cases including empty text
+    // Try Groq AI first (if available) - handles all cases including empty text
     let result = null;
-    if (geminiService.isAvailable) {
+    if (groqService.isAvailable) {
       try {
-        result = await geminiService.generateAdvice(normalizedText, language);
+        result = await groqService.generateAdvice(normalizedText, language);
         if (result && result.advice) {
-          console.log('✅ Using Gemini AI for advice generation');
+          console.log('✅ Using Groq AI for advice generation');
           console.log(`   Bible Verse: ${result.bibleVerse || 'Not provided'}`);
           return res.json({
             advice: result.advice,
@@ -397,22 +398,22 @@ app.post('/api/advice', async (req, res) => {
             detectedEmotion: result.detectedEmotion,
             confidence: result.confidence,
             timestamp: new Date().toISOString(),
-            source: 'gemini',
+            source: 'groq',
           });
         }
-      } catch (geminiError) {
-        console.warn('⚠️  Gemini AI failed, falling back to local AI engine:', geminiError.message);
+      } catch (groqError) {
+        console.warn('⚠️  Groq AI failed, falling back to local AI engine:', groqError.message);
       }
     }
 
-    // Fallback to local AI engine if Gemini is not available or failed
-    // Try Gemini one more time (in case it was a temporary issue)
-    if (geminiService.isAvailable && normalizedText.trim().length > 0) {
+    // Fallback to local AI engine if Groq is not available or failed
+    // Try Groq one more time (in case it was a temporary issue)
+    if (groqService.isAvailable && normalizedText.trim().length > 0) {
       try {
-        console.log('🔄 Retrying Gemini AI...');
-        result = await geminiService.generateAdvice(normalizedText, language);
+        console.log('🔄 Retrying Groq AI...');
+        result = await groqService.generateAdvice(normalizedText, language);
         if (result && result.advice) {
-          console.log('✅ Gemini AI retry successful');
+          console.log('✅ Groq AI retry successful');
           console.log(`   Bible Verse: ${result.bibleVerse || 'Not provided'}`);
           return res.json({
             advice: result.advice,
@@ -420,11 +421,11 @@ app.post('/api/advice', async (req, res) => {
             detectedEmotion: result.detectedEmotion,
             confidence: result.confidence,
             timestamp: new Date().toISOString(),
-            source: 'gemini-retry',
+            source: 'groq-retry',
           });
         }
       } catch (retryError) {
-        console.warn('⚠️  Gemini AI retry also failed:', retryError.message);
+        console.warn('⚠️  Groq AI retry also failed:', retryError.message);
       }
     }
 

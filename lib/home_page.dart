@@ -30,11 +30,11 @@ class _HomeShellState extends State<HomeShell> {
       title = isTagalog ? 'Highlight ngayon' : 'Today\'s highlight';
       body = const _FeelingHomePage();
     } else if (currentIndex == 1) {
-      title = isTagalog ? 'Mga Setting' : 'Settings';
-      body = const SettingsPage();
-    } else {
       title = isTagalog ? 'Mga Laro' : 'Games';
       body = const GamesPage();
+    } else {
+      title = isTagalog ? 'Mga Setting' : 'Settings';
+      body = const SettingsPage();
     }
 
     return Scaffold(
@@ -607,12 +607,12 @@ class BottomNavBar extends StatelessWidget {
                 onTap: () => onChanged(0),
               ),
               _BottomNavItem(
-                icon: Icons.settings_rounded,
+                icon: Icons.games_rounded,
                 isActive: currentIndex == 1,
                 onTap: () => onChanged(1),
               ),
               _BottomNavItem(
-                icon: Icons.games_rounded,
+                icon: Icons.settings_rounded,
                 isActive: currentIndex == 2,
                 onTap: () => onChanged(2),
               ),

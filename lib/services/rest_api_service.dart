@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'local_storage_service.dart';
+import '../app_config.dart';
 
 /// REST API Backend Service
 /// 
@@ -14,15 +15,11 @@ class RestApiService {
   RestApiService._() {
     // Log on initialization to verify correct URL is being used
     print('🔧 RestApiService initialized with baseUrl: $baseUrl');
+    print('📱 Testing mode: ${AppConfig.useLocalhost ? "BROWSER (localhost)" : "PHONE (10.0.2.165)"}');
   }
 
-  // Backend API base URL
-  // For Android Emulator: use 10.0.2.2 instead of localhost
-  // For iOS Simulator: use localhost
-  // For physical device: use your computer's IP address
-  // String baseUrl = 'http://10.0.2.2:3000/api'; // For Android Emulator
-  // String baseUrl = 'http://localhost:3000/api'; // For iOS Simulator
-  String baseUrl = 'http://10.0.2.165:3000/api'; // For physical device (your computer's IP)
+  // Backend API base URL - automatically selected based on AppConfig
+  late final String baseUrl = AppConfig.getBaseUrl();
 
   String? _userId;
   String? _sessionToken;

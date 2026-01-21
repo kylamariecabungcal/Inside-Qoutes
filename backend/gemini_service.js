@@ -36,7 +36,7 @@ class GeminiService {
     }
 
     try {
-      const model = this.genAI.getGenerativeModel({ model: 'gemini-pro' });
+      const model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
       
       const isTagalog = language === 'tl';
       const trimmedText = text.trim();
