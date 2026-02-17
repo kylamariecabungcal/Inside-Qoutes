@@ -183,9 +183,15 @@ class RestApiService {
     required String content,
     String? reference,
   }) async {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn) {
+      final signedIn = await signInAnonymously();
+      if (!signedIn) {
+        print('Cannot add favorite: user not signed in');
+        throw Exception('Not signed in');
+      }
+    }
     try {
-      await http.post(
+      final response = await http.post(
         Uri.parse('$baseUrl/users/$_userId/favorites'),
         headers: {
           'Content-Type': 'application/json',
@@ -197,8 +203,15 @@ class RestApiService {
           'reference': reference,
         }),
       );
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        print(
+            'Error adding favorite: status=${response.statusCode}, body=${response.body}');
+        throw HttpException(
+            'Failed to add favorite: ${response.statusCode}');
+      }
     } catch (e) {
       print('Error adding favorite: $e');
+      rethrow;
     }
   }
 

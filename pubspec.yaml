@@ -20,6 +20,25 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
+  
+  assets:
+    - assets/logo.png
+
+# Flutter Launcher Icons configuration
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true # Remove alpha channel for App Store compliance
+  web:
+    generate: true
+    image_path: "assets/logo.png"
+    background_color: "#005BEA"
+    theme_color: "#005BEA"
+  image_path: "assets/logo.png"
+  min_sdk_android: 21 # Android min sdk min:16, default 21
+  adaptive_icon_background: "#005BEA" # Android adaptive icon background color
+  adaptive_icon_foreground: "assets/logo.png" # Android adaptive icon foreground image

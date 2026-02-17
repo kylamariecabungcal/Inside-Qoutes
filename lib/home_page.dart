@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'app_settings.dart';
 import 'settings_page.dart';
 import 'games_page.dart';
+import 'favorites_page.dart';
 import 'services/rest_api_service.dart';
 
 class HomeShell extends StatefulWidget {
@@ -30,6 +32,9 @@ class _HomeShellState extends State<HomeShell> {
       title = isTagalog ? 'Highlight ngayon' : 'Today\'s highlight';
       body = const _FeelingHomePage();
     } else if (currentIndex == 1) {
+      title = isTagalog ? 'Mga Paborito' : 'Favorites';
+      body = const FavoritesPage();
+    } else if (currentIndex == 2) {
       title = isTagalog ? 'Mga Laro' : 'Games';
       body = const GamesPage();
     } else {
@@ -40,16 +45,31 @@ class _HomeShellState extends State<HomeShell> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         elevation: 0,
         backgroundColor: Colors.transparent,
-        title: Text(
-          title,
-          style: TextStyle(
-            color: primaryTextColor,
-            fontWeight: FontWeight.w700,
-            fontSize: 24,
-            letterSpacing: -0.5,
-          ),
+        title: Row(
+          children: [
+            // Logo (PNG with transparent background)
+            Image.asset(
+              'assets/logo.png',
+              width: 40,
+              height: 40,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: primaryTextColor,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 24,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+          ],
         ),
         centerTitle: false,
       ),
@@ -73,13 +93,220 @@ class _FeelingHomePage extends StatefulWidget {
 
 class _FeelingHomePageState extends State<_FeelingHomePage> {
   final TextEditingController _controller = TextEditingController();
+  final PageController _quotePageController = PageController();
+  final List<String> _englishQuotes = const [
+    'Great things never come from comfort zones.',
+    'Life begins at the end of your comfort zone.',
+    'The best things happen when you step outside your comfort zone.',
+  ];
+  int _currentQuoteIndex = 0;
+  Timer? _quoteTimer;
   String? _advice;
   String? _bibleVerse;
   bool _isLoadingAdvice = false;
+  bool _isAdviceFavorite = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startQuoteAutoScroll();
+  }
+
+  void _startQuoteAutoScroll() {
+    _quoteTimer?.cancel();
+    _quoteTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!mounted) return;
+      if (_englishQuotes.isEmpty) return;
+      if (!_quotePageController.hasClients) return;
+
+      final nextIndex = (_currentQuoteIndex + 1) % _englishQuotes.length;
+      // Debug log so you can see it firing in console
+      print('Auto-scrolling quote carousel to index $nextIndex');
+
+      _quotePageController.animateToPage(
+        nextIndex,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  Future<void> _saveAdviceToFavorites(bool isTagalog) async {
+    if (_advice == null || _advice!.trim().isEmpty) return;
+    try {
+      await RestApiService.instance.addFavorite(
+        type: 'advice',
+        content: _advice!.trim(),
+        reference: _bibleVerse,
+      );
+      if (!mounted) return;
+      setState(() {
+        _isAdviceFavorite = true;
+      });
+      final settings = AppSettings.of(context);
+      final isTagalogNow = settings.isTagalog;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isTagalogNow ? 'Na-save sa favorites.' : 'Saved to favorites.',
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error saving favorite: $e',
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Widget _buildQuoteCarousel({
+    required BuildContext context,
+    required List<String> quotes,
+    required bool isTagalog,
+    required bool isDark,
+    required Color primaryTextColor,
+    required Color accentColor,
+  }) {
+    final textTheme = Theme.of(context).textTheme;
+
+    final labelStyle = textTheme.labelLarge?.copyWith(
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.4,
+      color: isDark ? Colors.white70 : const Color(0xFF334155),
+    );
+
+    final quoteStyle = textTheme.titleLarge?.copyWith(
+      color: primaryTextColor,
+      fontWeight: FontWeight.w700,
+      height: 1.35,
+      letterSpacing: -0.2,
+    );
+
+    final quoteMarkStyle = textTheme.headlineSmall?.copyWith(
+      color: accentColor.withOpacity(0.7),
+      fontWeight: FontWeight.w900,
+      height: 1,
+    );
+
+    final showCarousel = quotes.length > 1;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: accentColor.withOpacity(isDark ? 0.18 : 0.12),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: accentColor.withOpacity(0.18)),
+              ),
+              child: Text(
+                isTagalog ? 'Quote ngayon' : 'Daily quote',
+                style: labelStyle,
+              ),
+            ),
+            const Spacer(),
+            if (showCarousel)
+              Text(
+                '${_currentQuoteIndex + 1}/${quotes.length}',
+                style: textTheme.labelLarge?.copyWith(
+                  color: isDark ? Colors.white60 : Colors.black54,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (showCarousel)
+          SizedBox(
+            height: 72,
+            child: PageView.builder(
+              controller: _quotePageController,
+              physics: const BouncingScrollPhysics(),
+              itemCount: quotes.length,
+              onPageChanged: (index) {
+                setState(() => _currentQuoteIndex = index);
+              },
+              itemBuilder: (context, index) {
+                final page = _quotePageController.hasClients
+                    ? (_quotePageController.page ??
+                        _currentQuoteIndex.toDouble())
+                    : _currentQuoteIndex.toDouble();
+                final distance = (page - index).abs();
+                final scale = (1 - (distance * 0.08)).clamp(0.92, 1.0);
+                final opacity = (1 - (distance * 0.35)).clamp(0.35, 1.0);
+
+                return Opacity(
+                  opacity: opacity,
+                  child: Transform.scale(
+                    scale: scale,
+                    alignment: Alignment.centerLeft,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(text: '“', style: quoteMarkStyle),
+                            TextSpan(text: quotes[index], style: quoteStyle),
+                            TextSpan(text: '”', style: quoteMarkStyle),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          )
+        else
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: '“', style: quoteMarkStyle),
+                TextSpan(text: quotes.first, style: quoteStyle),
+                TextSpan(text: '”', style: quoteMarkStyle),
+              ],
+            ),
+          ),
+        if (showCarousel) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: List.generate(
+              quotes.length,
+              (index) => AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                width: index == _currentQuoteIndex ? 18 : 6,
+                height: 6,
+                margin: const EdgeInsets.only(right: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  color: index == _currentQuoteIndex
+                      ? accentColor
+                      : accentColor.withOpacity(0.25),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 
   @override
   void dispose() {
     _controller.dispose();
+    _quotePageController.dispose();
+    _quoteTimer?.cancel();
     super.dispose();
   }
 
@@ -93,6 +320,7 @@ class _FeelingHomePageState extends State<_FeelingHomePage> {
       setState(() {
         _isLoadingAdvice = true;
         _advice = null;
+        _isAdviceFavorite = false;
       });
     }
 
@@ -124,6 +352,7 @@ class _FeelingHomePageState extends State<_FeelingHomePage> {
             _advice = result['advice'] as String;
             _bibleVerse = result['bibleVerse'] as String?;
             _isLoadingAdvice = false;
+            _isAdviceFavorite = false;
           });
         }
         print('Advice displayed successfully');
@@ -149,6 +378,7 @@ class _FeelingHomePageState extends State<_FeelingHomePage> {
                 _advice = retryResult['advice'] as String;
                 _bibleVerse = retryResult['bibleVerse'] as String?;
                 _isLoadingAdvice = false;
+                _isAdviceFavorite = false;
               });
             }
             print('Advice received on retry');
@@ -161,11 +391,12 @@ class _FeelingHomePageState extends State<_FeelingHomePage> {
         } catch (retryError) {
           print('Retry also failed: $retryError');
           // Show error message
+          final backendUrl = RestApiService.instance.baseUrl;
           if (mounted) {
             setState(() {
               _advice = isTagalog
-                  ? 'Hindi makakonekta sa AI service. Siguraduhin na ang backend server ay tumatakbo sa http://10.0.2.165:3000 at subukan ulit.'
-                  : 'Unable to connect to AI service. Make sure the backend server is running at http://10.0.2.165:3000 and try again.';
+                  ? 'Hindi makakonekta sa AI service. Siguraduhin na ang backend server ay tumatakbo sa $backendUrl at subukan ulit.'
+                  : 'Unable to connect to AI service. Make sure the backend server is running at $backendUrl and try again.';
               _isLoadingAdvice = false;
             });
           }
@@ -174,11 +405,12 @@ class _FeelingHomePageState extends State<_FeelingHomePage> {
     } catch (e) {
       print('Error getting advice from backend: $e');
       // Show error message with helpful info
+      final backendUrl = RestApiService.instance.baseUrl;
       if (mounted) {
         setState(() {
           _advice = isTagalog
-              ? 'Hindi makakonekta sa AI service. Siguraduhin na ang backend server ay tumatakbo sa http://10.0.2.165:3000 at subukan ulit.'
-              : 'Unable to connect to AI service. Make sure the backend server is running at http://10.0.2.165:3000 and try again.';
+              ? 'Hindi makakonekta sa AI service. Siguraduhin na ang backend server ay tumatakbo sa $backendUrl at subukan ulit.'
+              : 'Unable to connect to AI service. Make sure the backend server is running at $backendUrl and try again.';
           _isLoadingAdvice = false;
         });
       }
@@ -193,6 +425,9 @@ class _FeelingHomePageState extends State<_FeelingHomePage> {
     final primaryTextColor = isDark ? Colors.white : const Color(0xFF001A4D);
     final cardColor = isDark ? const Color(0xFF111827) : Colors.white;
     const accentColor = Color(0xFF005BEA);
+    final quotes = isTagalog
+        ? const ['Hindi nanggagaling sa comfort zone ang magagandang bagay.']
+        : _englishQuotes;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -204,7 +439,8 @@ class _FeelingHomePageState extends State<_FeelingHomePage> {
             // Quote Card with gradient
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(24),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -219,7 +455,7 @@ class _FeelingHomePageState extends State<_FeelingHomePage> {
                           const Color(0xFF00C6FB).withOpacity(0.1),
                         ],
                 ),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: accentColor.withOpacity(0.2),
                   width: 1,
@@ -249,15 +485,13 @@ class _FeelingHomePageState extends State<_FeelingHomePage> {
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: Text(
-                      isTagalog
-                          ? 'Hindi nanggagaling sa comfort zone ang magagandang bagay.'
-                          : 'Great things never come from comfort zones.',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: primaryTextColor,
-                            fontWeight: FontWeight.w600,
-                            height: 1.4,
-                          ),
+                    child: _buildQuoteCarousel(
+                      context: context,
+                      quotes: quotes,
+                      isTagalog: isTagalog,
+                      isDark: isDark,
+                      primaryTextColor: primaryTextColor,
+                      accentColor: accentColor,
                     ),
                   ),
                 ],
@@ -468,13 +702,35 @@ class _FeelingHomePageState extends State<_FeelingHomePage> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        Text(
-                          isTagalog ? 'Payo para sa iyo' : 'Advice for you',
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    color: primaryTextColor,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                        Expanded(
+                          child: Text(
+                            isTagalog ? 'Payo para sa iyo' : 'Advice for you',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
+                                  color: primaryTextColor,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            _isAdviceFavorite
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            color: _isAdviceFavorite
+                                ? Colors.pinkAccent
+                                : accentColor,
+                          ),
+                          onPressed: (_advice == null ||
+                                  _advice!.trim().isEmpty ||
+                                  _isAdviceFavorite)
+                              ? null
+                              : () => _saveAdviceToFavorites(isTagalog),
+                          tooltip: isTagalog
+                              ? 'I-save ang payo sa favorites'
+                              : 'Save this advice to favorites',
                         ),
                       ],
                     ),
@@ -607,14 +863,19 @@ class BottomNavBar extends StatelessWidget {
                 onTap: () => onChanged(0),
               ),
               _BottomNavItem(
-                icon: Icons.games_rounded,
+                icon: Icons.favorite_rounded,
                 isActive: currentIndex == 1,
                 onTap: () => onChanged(1),
               ),
               _BottomNavItem(
-                icon: Icons.settings_rounded,
+                icon: Icons.games_rounded,
                 isActive: currentIndex == 2,
                 onTap: () => onChanged(2),
+              ),
+              _BottomNavItem(
+                icon: Icons.settings_rounded,
+                isActive: currentIndex == 3,
+                onTap: () => onChanged(3),
               ),
             ],
           ),

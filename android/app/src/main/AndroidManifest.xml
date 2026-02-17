@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Needed for HTTP/HTTPS requests in release builds -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
-        android:label="inside_qoutes"
+        android:label="Inside Qoutes"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

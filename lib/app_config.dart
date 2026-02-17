@@ -12,8 +12,8 @@ class AppConfig {
       // For testing in browser on the same machine
       return 'http://localhost:3000/api';
     } else {
-      // For testing on physical device (use your computer's IP)
-      return 'http://10.0.2.165:3000/api';
+      // Production / deployed backend on Render
+      return 'https://inside-qoutes.onrender.com/api';
     }
   }
 

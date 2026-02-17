@@ -163,6 +163,29 @@ class _InsideQoutesAppState extends State<InsideQoutesApp> {
   }
 }
 
+// Logo widget (PNG supports transparency natively)
+class _TransparentLogo extends StatelessWidget {
+  const _TransparentLogo({
+    required this.assetPath,
+    required this.width,
+    required this.height,
+  });
+
+  final String assetPath;
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      assetPath,
+      width: width,
+      height: height,
+      fit: BoxFit.contain,
+    );
+  }
+}
+
 class LandingPage extends StatelessWidget {
   const LandingPage({super.key});
 
@@ -187,6 +210,13 @@ class LandingPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const Spacer(),
+            // Logo (PNG with transparent background)
+            _TransparentLogo(
+              assetPath: 'assets/logo.png',
+              width: 200,
+              height: 200,
+            ),
+            const SizedBox(height: 24),
             Text(
               'Inside Qoutes',
               textAlign: TextAlign.center,

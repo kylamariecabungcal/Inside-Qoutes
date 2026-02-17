@@ -75,9 +75,9 @@ app.post('/api/auth/anonymous', async (req, res) => {
   try {
     const userId = uuidv4();
     const token = uuidv4();
-    
+
     tokens.set(token, userId);
-    
+
     const users = await loadUsers();
     if (!users[userId]) {
       users[userId] = {
@@ -132,7 +132,7 @@ app.get('/api/users/:userId/settings', verifyToken, async (req, res) => {
 
     const users = await loadUsers();
     const user = users[req.params.userId];
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -153,7 +153,7 @@ app.put('/api/users/:userId/settings', verifyToken, async (req, res) => {
 
     const users = await loadUsers();
     const user = users[req.params.userId];
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -183,13 +183,13 @@ app.get('/api/users/:userId/quiz-scores', verifyToken, async (req, res) => {
 
     const users = await loadUsers();
     const user = users[req.params.userId];
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     // Sort by createdAt descending
-    const scores = (user.quizScores || []).sort((a, b) => 
+    const scores = (user.quizScores || []).sort((a, b) =>
       new Date(b.createdAt) - new Date(a.createdAt)
     );
 
@@ -209,7 +209,7 @@ app.post('/api/users/:userId/quiz-scores', verifyToken, async (req, res) => {
 
     const users = await loadUsers();
     const user = users[req.params.userId];
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -235,23 +235,18 @@ app.post('/api/users/:userId/quiz-scores', verifyToken, async (req, res) => {
 
 // ==================== FAVORITES ====================
 
-// Get favorites
-app.get('/api/users/:userId/favorites', verifyToken, async (req, res) => {
+// Get favorites (no auth to keep mobile/web simple)
+app.get('/api/users/:userId/favorites', async (req, res) => {
   try {
-    if (req.userId !== req.params.userId) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
     const users = await loadUsers();
     const user = users[req.params.userId];
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Sort by createdAt descending
-    const favorites = (user.favorites || []).sort((a, b) => 
-      new Date(b.createdAt) - new Date(a.createdAt)
+    const favorites = (user.favorites || []).sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
 
     res.json(favorites);
@@ -261,16 +256,12 @@ app.get('/api/users/:userId/favorites', verifyToken, async (req, res) => {
   }
 });
 
-// Add favorite
-app.post('/api/users/:userId/favorites', verifyToken, async (req, res) => {
+// Add favorite (no auth)
+app.post('/api/users/:userId/favorites', async (req, res) => {
   try {
-    if (req.userId !== req.params.userId) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
     const users = await loadUsers();
     const user = users[req.params.userId];
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -294,16 +285,12 @@ app.post('/api/users/:userId/favorites', verifyToken, async (req, res) => {
   }
 });
 
-// Remove favorite
-app.delete('/api/users/:userId/favorites/:favoriteId', verifyToken, async (req, res) => {
+// Remove favorite (no auth)
+app.delete('/api/users/:userId/favorites/:favoriteId', async (req, res) => {
   try {
-    if (req.userId !== req.params.userId) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
     const users = await loadUsers();
     const user = users[req.params.userId];
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -312,7 +299,9 @@ app.delete('/api/users/:userId/favorites/:favoriteId', verifyToken, async (req, 
       user.favorites = [];
     }
 
-    user.favorites = user.favorites.filter(f => f.id !== req.params.favoriteId);
+    user.favorites = user.favorites.filter(
+      (f) => f.id !== req.params.favoriteId
+    );
     await saveUsers(users);
 
     res.json({ message: 'Favorite removed successfully' });
@@ -333,7 +322,7 @@ app.get('/api/users/:userId/profile', verifyToken, async (req, res) => {
 
     const users = await loadUsers();
     const user = users[req.params.userId];
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -354,7 +343,7 @@ app.put('/api/users/:userId/profile', verifyToken, async (req, res) => {
 
     const users = await loadUsers();
     const user = users[req.params.userId];
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -380,7 +369,7 @@ app.put('/api/users/:userId/profile', verifyToken, async (req, res) => {
 app.post('/api/advice', async (req, res) => {
   try {
     const { text, language = 'en' } = req.body;
-    
+
     // Normalize text (allow empty strings - AI will handle it)
     const normalizedText = (text && typeof text === 'string') ? text : '';
 
@@ -447,13 +436,13 @@ app.post('/api/advice', async (req, res) => {
     console.log(`📤 Sent response to client\n`);
   } catch (error) {
     console.error('Error getting advice:', error);
-    
+
     // Last resort: Use local AI engine even on error (still AI-generated, not hardcoded)
     try {
       const language = req.body?.language || 'en';
       const text = req.body?.text || '';
       const result = adviceEngine.generateAdvice(text, language);
-      
+
       res.json({
         advice: result.advice,
         bibleVerse: result.bibleVerse || null,
@@ -480,31 +469,31 @@ app.post('/api/advice', async (req, res) => {
 app.post('/api/quiz/bible-verse', async (req, res) => {
   try {
     const { difficulty = 'easy', count = 5, language = 'en' } = req.body;
-    
+
     console.log(`\n📖 Generating Bible verse quiz: difficulty=${difficulty}, count=${count}, language=${language}`);
-    
+
     // Validate inputs
     if (!['easy', 'medium', 'hard'].includes(difficulty)) {
       return res.status(400).json({ error: 'Invalid difficulty. Must be easy, medium, or hard' });
     }
-    
+
     if (count < 1 || count > 20) {
       return res.status(400).json({ error: 'Count must be between 1 and 20' });
     }
 
     // Generate questions using Gemini AI ONLY - no fallback questions
     const questions = await quizService.generateBibleVerseQuiz(difficulty, count, language);
-    
+
     if (!questions) {
       // NO fallback questions - games MUST use AI (Gemini)
-      return res.status(503).json({ 
+      return res.status(503).json({
         error: 'Quiz generation unavailable. Please ensure Gemini API key is configured.',
         fallback: true,
       });
     }
 
     console.log(`✅ Generated ${questions.length} Bible verse quiz questions`);
-    
+
     res.json({
       questions: questions,
       difficulty: difficulty,
@@ -515,7 +504,7 @@ app.post('/api/quiz/bible-verse', async (req, res) => {
     });
   } catch (error) {
     console.error('Error generating Bible verse quiz:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to generate quiz questions',
       fallback: true,
     });
@@ -528,31 +517,31 @@ app.post('/api/quiz/bible-verse', async (req, res) => {
 app.post('/api/quiz/emotions', async (req, res) => {
   try {
     const { difficulty = 'easy', count = 5, language = 'en' } = req.body;
-    
+
     console.log(`\n😊 Generating Emotions quiz: difficulty=${difficulty}, count=${count}, language=${language}`);
-    
+
     // Validate inputs
     if (!['easy', 'medium', 'hard'].includes(difficulty)) {
       return res.status(400).json({ error: 'Invalid difficulty. Must be easy, medium, or hard' });
     }
-    
+
     if (count < 1 || count > 20) {
       return res.status(400).json({ error: 'Count must be between 1 and 20' });
     }
 
     // Generate questions using Gemini AI ONLY - no fallback questions
     const questions = await quizService.generateEmotionsQuiz(difficulty, count, language);
-    
+
     if (!questions) {
       // NO fallback questions - games MUST use AI (Gemini)
-      return res.status(503).json({ 
+      return res.status(503).json({
         error: 'Quiz generation unavailable. Please ensure Gemini API key is configured.',
         fallback: true,
       });
     }
 
     console.log(`✅ Generated ${questions.length} Emotions quiz questions`);
-    
+
     res.json({
       questions: questions,
       difficulty: difficulty,
@@ -563,7 +552,7 @@ app.post('/api/quiz/emotions', async (req, res) => {
     });
   } catch (error) {
     console.error('Error generating Emotions quiz:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to generate quiz questions',
       fallback: true,
     });
@@ -575,8 +564,8 @@ app.post('/api/quiz/emotions', async (req, res) => {
 app.get('/api/health', (req, res) => {
   const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
   console.log(`\n🏥 Health check from: ${clientIp}`);
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     message: 'Inside Qoutes API is running',
     timestamp: new Date().toISOString(),
     clientIp: clientIp,
@@ -587,7 +576,7 @@ app.get('/api/health', (req, res) => {
 app.get('/api/test', (req, res) => {
   const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
   console.log(`\n🧪 Test request from: ${clientIp}`);
-  res.json({ 
+  res.json({
     success: true,
     message: 'Connection test successful',
     serverTime: new Date().toISOString(),
