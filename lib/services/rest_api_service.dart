@@ -6,16 +6,17 @@ import 'local_storage_service.dart';
 import '../app_config.dart';
 
 /// REST API Backend Service
-/// 
+///
 /// Connects to a Node.js/Express backend via HTTP REST API
 class RestApiService {
   static RestApiService? _instance;
   static RestApiService get instance => _instance ??= RestApiService._();
-  
+
   RestApiService._() {
     // Log on initialization to verify correct URL is being used
     print('🔧 RestApiService initialized with baseUrl: $baseUrl');
-    print('📱 Testing mode: ${AppConfig.useLocalhost ? "BROWSER (localhost)" : "PHONE (10.0.2.165)"}');
+    print(
+        '📱 Testing mode: ${AppConfig.useLocalhost ? "BROWSER (localhost)" : "PHONE (10.0.2.165)"}');
   }
 
   // Backend API base URL - automatically selected based on AppConfig
@@ -48,7 +49,7 @@ class RestApiService {
         final data = json.decode(response.body);
         _userId = data['userId'] as String?;
         _sessionToken = data['token'] as String?;
-        
+
         if (_userId != null) {
           await _saveUserId(_userId!);
           if (_sessionToken != null) {
@@ -206,8 +207,7 @@ class RestApiService {
       if (response.statusCode != 200 && response.statusCode != 201) {
         print(
             'Error adding favorite: status=${response.statusCode}, body=${response.body}');
-        throw HttpException(
-            'Failed to add favorite: ${response.statusCode}');
+        throw HttpException('Failed to add favorite: ${response.statusCode}');
       }
     } catch (e) {
       print('Error adding favorite: $e');
@@ -238,17 +238,27 @@ class RestApiService {
     }
   }
 
-  Future<void> removeFavorite(String favoriteId) async {
-    if (!isLoggedIn) return;
+  /// Remove a favorite by id. Returns true on success, false otherwise.
+  Future<bool> removeFavorite(String favoriteId) async {
+    if (!isLoggedIn) return false;
     try {
-      await http.delete(
+      final response = await http.delete(
         Uri.parse('$baseUrl/users/$_userId/favorites/$favoriteId'),
         headers: {
           'Authorization': 'Bearer $_sessionToken',
         },
       );
+
+      if (response.statusCode == 200) {
+        return true;
+      }
+
+      print(
+          'Error removing favorite: status=${response.statusCode}, body=${response.body}');
+      return false;
     } catch (e) {
       print('Error removing favorite: $e');
+      return false;
     }
   }
 
@@ -333,8 +343,9 @@ class RestApiService {
       print('   Text: "$text"');
       print('   Language: $language');
       print('═══════════════════════════════════════');
-      
-      final response = await http.post(
+
+      final response = await http
+          .post(
         Uri.parse('$baseUrl/advice'),
         headers: {
           'Content-Type': 'application/json',
@@ -343,7 +354,8 @@ class RestApiService {
           'text': text,
           'language': language,
         }),
-      ).timeout(
+      )
+          .timeout(
         const Duration(seconds: 20),
         onTimeout: () {
           print('HTTP request timed out');
@@ -368,9 +380,11 @@ class RestApiService {
       print('   Error type: ${e.runtimeType}');
       print('   Attempted URL: $baseUrl/advice');
       if (e is TimeoutException) {
-        print('   ⚠️  Request timed out - backend might be slow or unreachable');
+        print(
+            '   ⚠️  Request timed out - backend might be slow or unreachable');
         print('   💡 Check if backend server is running on port 3000');
-      } else if (e is SocketException || e.toString().contains('Failed host lookup')) {
+      } else if (e is SocketException ||
+          e.toString().contains('Failed host lookup')) {
         print('   ⚠️  Network error - cannot reach backend at $baseUrl');
         print('   💡 Make sure:');
         print('      1. Backend server is running (node server.js)');
@@ -389,10 +403,12 @@ class RestApiService {
   Future<bool> testConnection() async {
     try {
       print('🧪 Testing connection to: $baseUrl/health');
-      final response = await http.get(
-        Uri.parse('$baseUrl/health'),
-      ).timeout(const Duration(seconds: 5));
-      
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/health'),
+          )
+          .timeout(const Duration(seconds: 5));
+
       if (response.statusCode == 200) {
         print('✅ Connection test successful!');
         print('   Response: ${response.body}');
@@ -412,9 +428,11 @@ class RestApiService {
     required String language,
   }) async {
     try {
-      print('📖 Requesting Bible verse quiz: difficulty=$difficulty, count=$count');
-      
-      final response = await http.post(
+      print(
+          '📖 Requesting Bible verse quiz: difficulty=$difficulty, count=$count');
+
+      final response = await http
+          .post(
         Uri.parse('$baseUrl/quiz/bible-verse'),
         headers: {
           'Content-Type': 'application/json',
@@ -424,7 +442,8 @@ class RestApiService {
           'count': count,
           'language': language,
         }),
-      ).timeout(
+      )
+          .timeout(
         const Duration(seconds: 60), // Increased timeout for AI generation
         onTimeout: () {
           throw TimeoutException('Quiz generation timed out');
@@ -432,7 +451,8 @@ class RestApiService {
       );
 
       print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}...');
+      print(
+          'Response body: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}...');
 
       if (response.statusCode == 200) {
         final result = json.decode(response.body) as Map<String, dynamic>;
@@ -456,8 +476,8 @@ class RestApiService {
       print('   URL attempted: $baseUrl/quiz/bible-verse');
       if (e is TimeoutException) {
         print('   ⚠️  Request timed out');
-      } else if (e.toString().contains('SocketException') || 
-                 e.toString().contains('Failed host lookup')) {
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('Failed host lookup')) {
         print('   ⚠️  Network error - cannot reach backend');
       }
       print('═══════════════════════════════════════');
@@ -472,9 +492,11 @@ class RestApiService {
     required String language,
   }) async {
     try {
-      print('😊 Requesting Emotions quiz: difficulty=$difficulty, count=$count');
-      
-      final response = await http.post(
+      print(
+          '😊 Requesting Emotions quiz: difficulty=$difficulty, count=$count');
+
+      final response = await http
+          .post(
         Uri.parse('$baseUrl/quiz/emotions'),
         headers: {
           'Content-Type': 'application/json',
@@ -484,7 +506,8 @@ class RestApiService {
           'count': count,
           'language': language,
         }),
-      ).timeout(
+      )
+          .timeout(
         const Duration(seconds: 60), // Increased timeout for AI generation
         onTimeout: () {
           throw TimeoutException('Quiz generation timed out');
@@ -492,7 +515,8 @@ class RestApiService {
       );
 
       print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}...');
+      print(
+          'Response body: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}...');
 
       if (response.statusCode == 200) {
         final result = json.decode(response.body) as Map<String, dynamic>;
@@ -516,8 +540,8 @@ class RestApiService {
       print('   URL attempted: $baseUrl/quiz/emotions');
       if (e is TimeoutException) {
         print('   ⚠️  Request timed out');
-      } else if (e.toString().contains('SocketException') || 
-                 e.toString().contains('Failed host lookup')) {
+      } else if (e.toString().contains('SocketException') ||
+          e.toString().contains('Failed host lookup')) {
         print('   ⚠️  Network error - cannot reach backend');
       }
       print('═══════════════════════════════════════');
@@ -525,4 +549,3 @@ class RestApiService {
     }
   }
 }
-

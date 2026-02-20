@@ -97,7 +97,7 @@ class _FeelingHomePageState extends State<_FeelingHomePage> {
   final List<String> _englishQuotes = const [
     'Great things never come from comfort zones.',
     'Life begins at the end of your comfort zone.',
-    'The best things happen when you step outside your comfort zone.',
+    'Step out of your comfort zone.',
   ];
   int _currentQuoteIndex = 0;
   Timer? _quoteTimer;

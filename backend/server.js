@@ -14,6 +14,7 @@ const AdviceEngine = require('./ai_advice_engine');
 const geminiService = require('./gemini_service');
 const groqService = require('./groq_service');
 const quizService = require('./quiz_service');
+const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,7 +30,7 @@ const usersFile = path.join(dataDir, 'users.json');
 // Initialize AI Advice Engine
 const adviceEngine = new AdviceEngine();
 
-// Initialize data directory
+// Initialize data directory (fallback storage)
 async function initDataDir() {
   try {
     await fs.mkdir(dataDir, { recursive: true });
@@ -43,8 +44,16 @@ async function initDataDir() {
   }
 }
 
-// Load users data
+// Load users data. If MongoDB is connected, use it; otherwise fall back to file storage.
 async function loadUsers() {
+  if (db && db.isConnected && db.isConnected()) {
+    try {
+      return await db.loadUsers();
+    } catch (err) {
+      console.error('Error loading users from MongoDB, falling back to file:', err.message);
+    }
+  }
+
   try {
     const data = await fs.readFile(usersFile, 'utf8');
     return JSON.parse(data);
@@ -53,8 +62,17 @@ async function loadUsers() {
   }
 }
 
-// Save users data
+// Save users data. If MongoDB is connected, use it; otherwise fall back to file storage.
 async function saveUsers(users) {
+  if (db && db.isConnected && db.isConnected()) {
+    try {
+      await db.saveUsers(users);
+      return;
+    } catch (err) {
+      console.error('Error saving users to MongoDB, falling back to file:', err.message);
+    }
+  }
+
   try {
     await fs.writeFile(usersFile, JSON.stringify(users, null, 2));
   } catch (error) {
@@ -67,6 +85,10 @@ const tokens = new Map();
 
 // Initialize
 initDataDir();
+// Try to connect to MongoDB if MONGODB_URI is provided. If connection fails, app will continue using file storage.
+db.connect(process.env.MONGODB_URI).catch((err) => {
+  console.warn('MongoDB connection not available; using file-based storage.');
+});
 
 // ==================== AUTHENTICATION ====================
 

@@ -176,9 +176,32 @@ class _FavoritesPageState extends State<FavoritesPage> {
           ),
           TextButton(
             onPressed: () async {
-              await RestApiService.instance.removeFavorite(favoriteId);
+              // Attempt to remove the favorite on the server.
+              final success =
+                  await RestApiService.instance.removeFavorite(favoriteId);
               Navigator.of(context).pop();
-              _loadFavorites(); // Refresh the list
+
+              if (success) {
+                // Optimistically update the local list so the UI updates immediately.
+                if (mounted) {
+                  setState(() {
+                    _favorites
+                        .removeWhere((f) => (f['id'] as String?) == favoriteId);
+                  });
+                }
+              } else {
+                // If delete failed, reload from server to ensure UI consistency and show message.
+                _loadFavorites();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(isTagalog
+                          ? 'Hindi natanggal ang paborito. Subukang muli.'
+                          : 'Failed to remove favorite. Please try again.'),
+                    ),
+                  );
+                }
+              }
             },
             child: Text(
               isTagalog ? 'Tanggalin' : 'Remove',
